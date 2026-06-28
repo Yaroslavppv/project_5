@@ -11,6 +11,10 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
 from pathlib import Path
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -140,4 +144,4 @@ SPECTACULAR_SETTINGS = {
     'SERVE_INCLUDE_SCHEMA': False,
 }
 
-STRIPE_SECRET_KEY = "sk_test_51TnNLDQeaEZfuDDmkLrDkNM9AUFxzLimF9Hea722K8TXuRgvehMgJ2zQsQZuTpeMrWAdKEglCT0BK3ZeUYlLDj6P00i56llcM4"
+STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY")
