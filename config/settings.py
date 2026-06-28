@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'django_filters',
+    'drf_spectacular',
     'users',
     'materials',
 ]
@@ -129,4 +130,14 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
     ),
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Онлайн-обучение API',
+    'DESCRIPTION': 'Документация для API системы курсов и уроков',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+}
+
+STRIPE_SECRET_KEY = "sk_test_51TnNLDQeaEZfuDDmkLrDkNM9AUFxzLimF9Hea722K8TXuRgvehMgJ2zQsQZuTpeMrWAdKEglCT0BK3ZeUYlLDj6P00i56llcM4"

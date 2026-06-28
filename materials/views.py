@@ -7,6 +7,8 @@ from materials.serializers import CourseSerializer, LessonSerializer
 from materials.permissions import IsModerator, IsOwner
 from django.shortcuts import get_object_or_404
 from materials.paginators import MaterialsPagination
+from materials.services import create_stripe_product, create_stripe_price, create_stripe_session
+from users.models import Payment
 
 class CourseViewSet(viewsets.ModelViewSet):
     serializer_class = CourseSerializer
@@ -90,3 +92,41 @@ class SubscriptionAPIView(APIView):
             message = 'Подписка добавлена'
 
         return Response({"message": message}, status=status.HTTP_200_OK)
+
+
+class CoursePaymentAPIView(APIView):
+    """
+    Контроллер для инициализации оплаты курса через Stripe с сохранением в БД.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        course_id = request.data.get('course_id')
+        course = get_object_or_404(Course, id=course_id)
+
+        amount = getattr(course, 'price', 1000.00)
+
+        try:
+            product_id = create_stripe_product(course.title)
+            price_id = create_stripe_price(product_id, amount)
+            payment_url, session_id = create_stripe_session(price_id)
+
+            payment = Payment.objects.create(
+                user=request.user,
+                course=course,
+                amount=amount,
+                payment_method='transfer',
+                session_id=session_id,
+                link=payment_url
+            )
+
+            return Response({
+                "id": payment.id,
+                "course": course.id,
+                "amount": str(payment.amount),
+                "payment_url": payment.link,
+                "session_id": payment.session_id
+            }, status=status.HTTP_201_CREATED)
+
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
