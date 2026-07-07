@@ -9,6 +9,7 @@ from django.shortcuts import get_object_or_404
 from materials.paginators import MaterialsPagination
 from materials.services import create_stripe_product, create_stripe_price, create_stripe_session
 from users.models import Payment
+from materials.tasks import send_course_update_email
 
 class CourseViewSet(viewsets.ModelViewSet):
     serializer_class = CourseSerializer
@@ -32,13 +33,19 @@ class CourseViewSet(viewsets.ModelViewSet):
             self.permission_classes = [IsAuthenticated]
         return super().get_permissions()
 
+    def perform_update(self, serializer):
+        course = serializer.save()
+        send_course_update_email.delay(course.id)
+
 
 class LessonCreateAPIView(generics.CreateAPIView):
     serializer_class = LessonSerializer
     permission_classes = [IsAuthenticated, ~IsModerator]
 
     def perform_create(self, serializer):
-        serializer.save(owner=self.request.user)
+        lesson = serializer.save(owner=self.request.user)
+        if lesson.course:
+            send_course_update_email.delay(lesson.course.id)
 
 
 class LessonListAPIView(generics.ListAPIView):
