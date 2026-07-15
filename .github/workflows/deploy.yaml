@@ -59,10 +59,9 @@ jobs:
               git pull origin feature_8
             fi
             
-            # Автоматически создаем .env файл на сервере из секретов GitHub для безопасности
-            echo "STRIPE_SECRET_KEY=${{ secrets.STRIPE_SECRET_KEY }}" > .env
-            echo "CELERY_BROKER_URL=redis://redis:6379/0" >> .env
-            echo "CELERY_RESULT_BACKEND=redis://redis:6379/0" >> .env
+            cd /app/project_5 && echo "STRIPE_SECRET_KEY=${{ secrets.STRIPE_SECRET_KEY }}" > .env
+            cd /app/project_5 && echo "CELERY_BROKER_URL=redis://redis:6379/0" >> .env
+            cd /app/project_5 && echo "CELERY_RESULT_BACKEND=redis://redis:6379/0" >> .env
             
-            docker-compose down
-            docker-compose up --build -d
+            cd /app/project_5 && docker-compose down
+            cd /app/project_5 && docker-compose up --build -d
