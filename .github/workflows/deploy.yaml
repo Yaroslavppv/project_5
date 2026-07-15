@@ -56,7 +56,7 @@ jobs:
             if [ ! -d ".git" ]; then
               git clone https://github.com{{ github.repository }}.git .
             else
-              git pull origin feature_5
+              git pull origin feature_8
             fi
             
             # Автоматически создаем .env файл на сервере из секретов GitHub для безопасности
