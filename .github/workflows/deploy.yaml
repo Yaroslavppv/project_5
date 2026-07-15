@@ -33,35 +33,43 @@ jobs:
           python manage.py test
   
 
-  deploy:
+ deploy:
     runs-on: ubuntu-latest
     needs: test_and_lint
     steps:
       - name: Проверка исходного кода
         uses: actions/checkout@v3
 
-      - name: Деплой по SSH-ключу
+      - name: Копирование файлов конфигурации на сервер
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          source: "docker-compose.yaml,nginx.conf,.env.template,requirements.txt,Dockerfile"
+          target: "/app/project_5"
+          rm: true
+
+      - name: Деплой по SSH-ключу и запуск контейнеров
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
-            mkdir -p /app/project_5 && cd /app/project_5
+            # Переходим в папку проекта на сервере
+            cd /app/project_5
             
+            # Устанавливаем Docker, если его вдруг еще нет
             if ! command -v docker &> /dev/null; then
               apt-get update && apt-get install -y docker.io docker-compose
             fi
             
-            if [ ! -d ".git" ]; then
-              git clone https://github.com{{ github.repository }}.git .
-            else
-              git pull origin feature_8
-            fi
+            # Автоматически генерируем .env файл на сервере на основе секретов GitHub
+            echo "STRIPE_SECRET_KEY=${{ secrets.STRIPE_SECRET_KEY }}" > .env
+            echo "CELERY_BROKER_URL=redis://redis:6379/0" >> .env
+            echo "CELERY_RESULT_BACKEND=redis://redis:6379/0" >> .env
             
-            cd /app/project_5 && echo "STRIPE_SECRET_KEY=${{ secrets.STRIPE_SECRET_KEY }}" > .env
-            cd /app/project_5 && echo "CELERY_BROKER_URL=redis://redis:6379/0" >> .env
-            cd /app/project_5 && echo "CELERY_RESULT_BACKEND=redis://redis:6379/0" >> .env
-            
-            cd /app/project_5 && docker-compose down
-            cd /app/project_5 && docker-compose up --build -d
+            # Перезапускаем сборку контейнеров в фоновом режиме (detached)
+            docker-compose down
+            docker-compose up --build -d
