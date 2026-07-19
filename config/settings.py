@@ -81,16 +81,24 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('POSTGRES_DB', 'my_project_db'),
-        'USER': os.getenv('POSTGRES_USER', 'postgres_user'),
-        'PASSWORD': os.getenv('POSTGRES_PASSWORD', 'my_secure_password'),
-        'HOST': os.getenv('POSTGRES_HOST', 'localhost'),  # При локальном запуске без докера будет localhost
-        'PORT': os.getenv('POSTGRES_PORT', '5432'),
+if 'test' in sys.argv:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+        }
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.getenv('POSTGRES_DB', 'my_project_db'),
+            'USER': os.getenv('POSTGRES_USER', 'postgres_user'),
+            'PASSWORD': os.getenv('POSTGRES_PASSWORD', 'my_secure_password'),
+            'HOST': os.getenv('POSTGRES_HOST', 'localhost'),  # При локальном запуске без докера будет localhost
+            'PORT': os.getenv('POSTGRES_PORT', '5432'),
+        }
+    }
 
 
 # Password validation
