@@ -1,0 +1,81 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ develop, feature_9 ]
+
+jobs:
+  test_and_lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Проверка исходного кода
+        uses: actions/checkout@v3
+
+      - name: Установка Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Установка зависимостей
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt flake8
+
+      - name: Запуск линтера (Проверка стиля кода)
+        run: |
+          # Проверяем синтаксические ошибки Python
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+
+      - name: Запуск тестов проекта
+        env:
+          SECRET_KEY: 'django-insecure-test-key-for-github-actions-pipeline'
+        run: |
+          python manage.py test
+  
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: test_and_lint
+    steps:
+      - name: Проверка исходного кода
+        uses: actions/checkout@v3
+
+      - name: Копирование файлов конфигурации на сервер
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          source: "docker-compose.yaml,nginx.conf,.env.template,requirements.txt,Dockerfile"
+          target: "/app/project_5"
+          rm: true
+
+      - name: Деплой по SSH-ключу и запуск контейнеров
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            # Переходим в папку проекта на сервере
+            cd /app/project_5
+            
+            # Устанавливаем Docker, если его вдруг еще нет
+            if ! command -v docker &> /dev/null; then
+              apt-get update && apt-get install -y docker.io docker-compose
+            fi
+            
+            # Автоматически генерируем .env файл на сервере на основе секретов GitHub
+            echo "STRIPE_SECRET_KEY=${{ secrets.STRIPE_SECRET_KEY }}" > .env
+            echo "CELERY_BROKER_URL=redis://redis:6379/0" >> .env
+            echo "CELERY_RESULT_BACKEND=redis://redis:6379/0" >> .env
+            # Полученние данных сервера
+            echo "POSTGRES_DB=${{ secrets.POSTGRES_DB }}" >> .env
+            echo "POSTGRES_USER=${{ secrets.POSTGRES_USER }}" >> .env
+            echo "POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}" >> .env
+            echo "POSTGRES_HOST=db" >> .env
+            echo "POSTGRES_PORT=5432" >> .env
+            
+            # Перезапускаем сборку контейнеров в фоновом режиме (detached)
+            docker-compose down
+            docker-compose up --build -d
